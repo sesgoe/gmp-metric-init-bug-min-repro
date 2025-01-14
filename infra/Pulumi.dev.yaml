@@ -1,0 +1,3 @@
+config:
+  gcp:project: gmp-metric-init-bug-min-repro
+  gcp:region: us-east1
