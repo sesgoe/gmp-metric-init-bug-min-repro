@@ -77,23 +77,23 @@ current-context: ${context}`;
     }),
 });
 
-// Deploy the application
-const appLabels = { app: "metrics-app" };
+// Deploy the Quarkus application
+const quarkusLabels = { app: "metrics-app-quarkus" };
 
-const deployment = new k8s.apps.v1.Deployment(
-  "metrics-deployment",
+const quarkusDeployment = new k8s.apps.v1.Deployment(
+  "quarkus-deployment",
   {
-    metadata: { name: "metrics-app" },
+    metadata: { name: "metrics-app-quarkus" },
     spec: {
       replicas: 1,
-      selector: { matchLabels: appLabels },
+      selector: { matchLabels: quarkusLabels },
       template: {
-        metadata: { labels: appLabels },
+        metadata: { labels: quarkusLabels },
         spec: {
           containers: [
             {
-              name: "metrics-app",
-              image: "sesgoe/gmp-min-repro-metrics:latest",
+              name: "metrics-app-quarkus",
+              image: "sesgoe/gmp-min-repro-metrics-quarkus:latest",
               ports: [{ containerPort: 8080, name: "http" }],
               resources: {
                 requests: {
@@ -114,28 +114,28 @@ const deployment = new k8s.apps.v1.Deployment(
   { provider: clusterProvider }
 );
 
-const service = new k8s.core.v1.Service(
-  "metrics-service",
+const quarkusService = new k8s.core.v1.Service(
+  "quarkus-service",
   {
-    metadata: { name: "metrics-app" },
+    metadata: { name: "metrics-app-quarkus" },
     spec: {
       type: "LoadBalancer",
       ports: [{ port: 80, targetPort: 8080, protocol: "TCP", name: "http" }],
-      selector: appLabels,
+      selector: quarkusLabels,
     },
   },
   { provider: clusterProvider }
 );
 
-const podMonitor = new k8s.apiextensions.CustomResource(
-  "metrics-podmonitor",
+const quarkusPodMonitor = new k8s.apiextensions.CustomResource(
+  "quarkus-podmonitor",
   {
     apiVersion: "monitoring.googleapis.com/v1",
     kind: "PodMonitoring",
-    metadata: { name: "metrics-app-monitor" },
+    metadata: { name: "metrics-app-quarkus-monitor" },
     spec: {
       selector: {
-        matchLabels: appLabels,
+        matchLabels: quarkusLabels,
       },
       endpoints: [
         {
@@ -149,5 +149,79 @@ const podMonitor = new k8s.apiextensions.CustomResource(
   { provider: clusterProvider }
 );
 
-// Export the service IP
-export const serviceIp = service.status.loadBalancer.ingress[0].ip;
+// Deploy the Python application
+const pythonLabels = { app: "metrics-app-python" };
+
+const pythonDeployment = new k8s.apps.v1.Deployment(
+  "python-deployment",
+  {
+    metadata: { name: "metrics-app-python" },
+    spec: {
+      replicas: 1,
+      selector: { matchLabels: pythonLabels },
+      template: {
+        metadata: { labels: pythonLabels },
+        spec: {
+          containers: [
+            {
+              name: "metrics-app-python",
+              image: "sesgoe/gmp-min-repro-metrics-python:latest",
+              ports: [{ containerPort: 8080, name: "http" }],
+              resources: {
+                requests: {
+                  memory: "128Mi",
+                  cpu: "100m",
+                },
+                limits: {
+                  memory: "256Mi",
+                  cpu: "500m",
+                },
+              },
+            },
+          ],
+        },
+      },
+    },
+  },
+  { provider: clusterProvider }
+);
+
+const pythonService = new k8s.core.v1.Service(
+  "python-service",
+  {
+    metadata: { name: "metrics-app-python" },
+    spec: {
+      type: "LoadBalancer",
+      ports: [{ port: 80, targetPort: 8080, protocol: "TCP", name: "http" }],
+      selector: pythonLabels,
+    },
+  },
+  { provider: clusterProvider }
+);
+
+const pythonPodMonitor = new k8s.apiextensions.CustomResource(
+  "python-podmonitor",
+  {
+    apiVersion: "monitoring.googleapis.com/v1",
+    kind: "PodMonitoring",
+    metadata: { name: "metrics-app-python-monitor" },
+    spec: {
+      selector: {
+        matchLabels: pythonLabels,
+      },
+      endpoints: [
+        {
+          port: "http",
+          interval: "10s",
+          path: "/q/metrics",
+        },
+      ],
+    },
+  },
+  { provider: clusterProvider }
+);
+
+// Export both service IPs
+export const quarkusServiceIp =
+  quarkusService.status.loadBalancer.ingress[0].ip;
+export const pythonServiceIp = pythonService.status.loadBalancer.ingress[0].ip;
