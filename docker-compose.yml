@@ -1,9 +1,13 @@
-version: "3"
 services:
   metrics-app:
-    image: sesgoe/gmp-min-repro-metrics:latest
+    image: sesgoe/gmp-min-repro-metrics-quarkus:latest
     ports:
       - "8080:8080"
+
+  python-metrics:
+    image: sesgoe/gmp-min-repro-metrics-python:latest
+    ports:
+      - "8081:8080"
 
   prometheus:
     image: prom/prometheus:latest
